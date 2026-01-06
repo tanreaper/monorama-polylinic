@@ -107,7 +107,9 @@ function showCamera() {
     hideAlert('upload-alert');
     document.getElementById('camera-container').classList.add('hidden');
     document.getElementById('preview-container').classList.add('hidden');
+    document.getElementById('patient-name-input').value = ''; 
 }
+
 
 function showPatients() {
     showScreen('patients-screen');
@@ -186,16 +188,20 @@ function stopCamera() {
 function retakePhoto() {
     capturedImageBlob = null;
     document.getElementById('preview-container').classList.add('hidden');
+    document.getElementById('patient-name-input').value = '';  // ADD THIS LINE
     startCamera();
 }
+
 
 // ============ OCR & Upload ============
 
 async function extractPatientName() {
-    if (!capturedImageBlob) return;
+    if (!capturedImageBlob) {
+        return;
+    }
 
-    const formData = new FormData();
-    formData.append('file', capturedImageBlob, 'prescription.jpg');
+   const formData = new FormData();
+   formData.append('file', capturedImageBlob, 'prescription.jpg');
 
     try {
         const response = await fetch(`${API_BASE}/api/ocr/extract-name`, {
@@ -212,34 +218,112 @@ async function extractPatientName() {
             const patientName = data.data.patient_name;
             const confidence = data.data.confidence;
 
+            // Get the input field
+            const nameInput = document.getElementById('patient-name-input');
+            const resultEl = document.getElementById('ocr-result');
+
+            if (!nameInput) {
+                console.error('ERROR: patient-name-input element not found!');
+                return;
+            }
+
             if (patientName) {
-                const resultEl = document.getElementById('ocr-result');
-                resultEl.innerHTML = 'Patient Name: ' + patientName + '<br>Confidence: ' + confidence;
+                // SUCCESS: OCR found a name
+                // Pre-fill the input field with extracted name
+                nameInput.value = patientName;
+
+                // Show success message
+                resultEl.innerHTML = `
+                    <div>
+                        <i class="fas fa-check-circle"></i>
+                        <strong>Name extracted successfully!</strong><br>
+                        <small>Confidence: ${confidence} - You can edit below if needed</small>
+                    </div>
+                `;
                 resultEl.className = 'alert alert-success';
             } else {
-                const resultEl = document.getElementById('ocr-result');
-                resultEl.innerHTML = 'Could not extract patient name. You can still upload.';
+                // OCR FAILED: Couldn't find name
+                // Leave input field empty
+                nameInput.value = '';
+
+                // Show warning - user must type manually
+                resultEl.innerHTML = `
+                    <div>
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>Could not extract patient name</strong><br>
+                        <small>Please enter the name manually below</small>
+                    </div>
+                `;
                 resultEl.className = 'alert alert-info';
+
+                // Focus on input field so user can type immediately
+                nameInput.focus();
             }
         } else {
-            throw new Error('OCR failed');
+            showOcrWarning();
         }
     } catch (error) {
-        const resultEl = document.getElementById('ocr-result');
-        resultEl.innerHTML = 'Name extraction failed. You can still upload.';
-        resultEl.className = 'alert alert-info';
+        showOcrWarning();
         console.error('OCR error:', error);
     }
 }
+
+function showOcrWarning() {
+    const nameInput = document.getElementById('patient-name-input');
+    const resultEl = document.getElementById('ocr-result');
+    
+    // Leave input field empty
+    nameInput.value = '';
+    
+    // Show warning
+    resultEl.innerHTML = `
+        <div>
+            <i class="fas fa-exclamation-triangle"></i>
+            <strong>Could not extract patient name</strong><br>
+            <small>Please enter the name manually below</small>
+        </div>
+    `;
+    resultEl.className = 'alert alert-info';
+    
+    // Focus on input field
+    nameInput.focus();
+}
+
+
 
 async function uploadPrescription() {
     if (!capturedImageBlob) {
         showAlert('upload-alert', 'No image captured', 'error');
         return;
     }
+    // Get patient name from input field
+    const patientNameInput = document.getElementById('patient-name-input');
+
+    if (!patientNameInput) {
+        console.error('ERROR: patient-name-input element not found in uploadPrescription!');
+        showAlert('upload-alert', 'Error: Name input field not found', 'error');
+        return;
+    }
+
+    const patientName = patientNameInput.value.trim();
+
+    // Validate: name must not be empty
+    if (!patientName) {
+        showAlert('upload-alert', 'Please enter a patient name', 'error');
+        patientNameInput.focus();
+        return;
+    }
+
+    // Validate: name must be at least 2 characters
+    if (patientName.length < 2) {
+        showAlert('upload-alert', 'Patient name must be at least 2 characters', 'error');
+        patientNameInput.focus();
+        return;
+    }
 
     const formData = new FormData();
     formData.append('file', capturedImageBlob, 'prescription.jpg');
+    formData.append('manual_name', patientName);
 
     try {
         showAlert('upload-alert', 'Uploading prescription...', 'info');

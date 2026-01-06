@@ -21,7 +21,7 @@ def hash_password(password: str) -> str:
 USERS = {
     "monoramaclinic_admin": {
         "username": "monoramaclinic_admin",
-        "hashed_password": hash_password("monorama2024"),
+        "hashed_password": hash_password("monorama2026"),
         "role": "admin"
     }
 }

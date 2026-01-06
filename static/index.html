@@ -360,8 +360,22 @@
             <div id="preview-container" class="hidden">
                 <img id="preview-image" alt="Preview">
                 <div id="ocr-result" class="alert alert-info"></div>
-                <button class="btn btn-primary" onclick="uploadPrescription()">Upload
-                    Prescription</button>
+                <!-- Editable Patient Name Field (NEW!) -->
+                <div class="form-group">
+                    <label for="patient-name-input">
+                        <i class="fas fa-user"></i> Patient Name
+                        <small style="color: var(--text-light); font-weight: normal;">(Edit if needed)</small>
+                    </label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-user-edit"></i>
+                        <input type="text" id="patient-name-input" placeholder="Enter patient name" required
+                            style="padding-left: 45px;">
+                    </div>
+                    <small id="name-helper" style="color: var(--text-light); font-size: 12px; display: block;margin-top: 5px;">
+                        This name will be used to organize the prescription
+                    </small>
+                </div>
+                <button class="btn btn-primary" onclick="uploadPrescription()">Upload Prescription</button>
                 <button class="btn btn-secondary" onclick="retakePhoto()">Retake Photo</button>
             </div>
         </div>

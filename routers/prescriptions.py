@@ -2,7 +2,8 @@
 Prescriptions Router - API endpoints for managing prescription uploads
 """
 
-from fastapi import APIRouter, UploadFile, File, HTTPException
+from fastapi import APIRouter, UploadFile, File, HTTPException, Form
+from typing import Optional
 from services.ocr_service import ocr_service
 from services.storage_service import storage_service
 
@@ -13,12 +14,13 @@ router = APIRouter(
 
 
 @router.post("/upload")
-async def upload_prescription(file: UploadFile = File(...)):
+async def upload_prescription(file: UploadFile = File(...), manual_name: Optional[str] = Form(None)):
     """
     Upload a prescription image:
     1. Extract patient name using OCR
-    2. Upload to Cloud Storage
-    3. Return details
+    2. Accept manual overriden name. [Optional]
+    3. Upload to Cloud Storage
+    4. Return details
 
     - **file**: Image file (JPG, PNG, etc.)
     """
@@ -51,10 +53,17 @@ async def upload_prescription(file: UploadFile = File(...)):
         ocr_result = ocr_service.extract_patient_name(contents)
         patient_name = ocr_result.get("patient_name")
 
+        # If manual name provided, use that instead
+        if manual_name and manual_name.strip():
+            patient_name = manual_name.strip()
+            ocr_result["patient_name"] = patient_name
+            ocr_result["message"] = "Name provided manually"
+
+        # Validate we have a name
         if not patient_name:
             raise HTTPException(
                 status_code=400,
-                detail="Could not extract patient name from prescription"
+                detail="Could not extract patient name and no manual name provided"
             )
     except Exception as e:
         raise HTTPException(

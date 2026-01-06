@@ -6,12 +6,17 @@ from google.cloud import vision
 import re
 from typing import Optional
 import io
+import os
 
 
 class OCRService:
     def __init__(self):
         """Initialize the Vision API client"""
-        self.client = vision.ImageAnnotatorClient()
+        self.use_mock = os.getenv("USE_MOCK_OCR", "false").lower() == "true"
+        if not self.use_mock:
+            self.client = vision.ImageAnnotatorClient()
+        else:
+            self.client = None
 
     def extract_text_from_image(self, image_content: bytes) -> str:
         """
@@ -23,6 +28,10 @@ class OCRService:
         Returns:
             Extracted text as a string
         """
+        # Mock mode for local development without GCP
+        if self.use_mock:
+            return "Patient Name: Mock Patient\nDate: 2024-01-01\nAge: 30\nSex: M\nWeight: 70kg"
+
         # Create image object for Vision API
         image = vision.Image(content=image_content)
 
